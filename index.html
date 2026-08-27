@@ -119,6 +119,21 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="categoria">Tecnologia / Categoria</label>
+                    <select id="categoria" style="width: 100%; background-color: var(--bg-input); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; color: var(--text-main); font-size: 0.95rem; outline: none;">
+                        <option value="Python">Python</option>
+                        <option value="JavaScript">JavaScript</option>
+                        <option value="Java">Java</option>
+                        <option value="C#">C# (.NET)</option>
+                        <option value="PHP">PHP</option>
+                        <option value="React">React</option>
+                        <option value="HTML/CSS">HTML/CSS</option>
+                        <option value="SQL">SQL / Banco de Dados</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label for="aulas">Qtd. de Aulas</label>
                     <input type="number" id="aulas" placeholder="Ex: 40">
                 </div>
@@ -135,8 +150,11 @@
             </div>
 
             <div class="card">
-                <div class="card-header">
+                <div class="card-header" style="display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
                     <h2>Cursos Cadastrados</h2>
+                    <div style="display: flex; gap: 8px; flex: 1; max-width: 300px;">
+                        <input type="text" id="input-busca" placeholder="Buscar curso..." oninput="carregarCursos()" style="width: 100%; background-color: var(--bg-input); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: var(--text-main); font-size: 0.85rem; outline: none;">
+                    </div>
                     <button class="btn-refresh" onclick="carregarCursos()">↻ Atualizar</button>
                 </div>
                 <table>
@@ -195,14 +213,17 @@
 
         async function carregarCursos() {
             try {
-                const resposta = await fetch(API_URL);
+                const inputBusca = document.getElementById("input-busca");
+                const termo = inputBusca ? inputBusca.value.trim() : "";
+                const url = termo ? `${API_URL}?q=${encodeURIComponent(termo)}` : API_URL;
+
+                const resposta = await fetch(url);
                 const cursos = await resposta.json();
                 
                 const tabela = document.getElementById("tabela-cursos");
                 tabela.innerHTML = "";
                 
                 let totalAulas = 0;
-                let totalHoras = 0;
 
                 cursos.forEach(c => {
                     totalAulas += c.aulas;
@@ -220,7 +241,8 @@
 
                 cursos.forEach(curso => {
                     const tr = document.createElement("tr");
-                    const icone = obterIconeLinguagem(curso.titulo);
+                    const termoIcone = curso.categoria || curso.titulo;
+                    const icone = obterIconeLinguagem(termoIcone);
                     
                     tr.innerHTML = `
                         <td><span class="badge-id">#${curso.id}</span></td>
@@ -232,8 +254,8 @@
                         </td>
                         <td style="color: var(--text-muted);">${curso.aulas} aulas • ${curso.horas}h</td>
                         <td style="text-align: right;">
-                            <button class="btn-edit btn-sm" onclick="prepararEdicao(${curso.id}, '${curso.titulo}', ${curso.aulas}, ${curso.horas})">Editar</button>
-                            <button class="btn-delete btn-sm" onclick="abrirModalDeletar(${curso.id}, '${curso.titulo}')">Excluir</button>
+                            <button class="btn-edit btn-sm" onclick="prepararEdicao(${curso.id}, '${curso.titulo.replace(/'/g, "\\'")}', '${(curso.categoria || "Outros").replace(/'/g, "\\'")}', ${curso.aulas}, ${curso.horas})">Editar</button>
+                            <button class="btn-delete btn-sm" onclick="abrirModalDeletar(${curso.id}, '${curso.titulo.replace(/'/g, "\\'")}')">Excluir</button>
                         </td>
                     `;
                     tabela.appendChild(tr);
@@ -241,37 +263,6 @@
             } catch (err) {
                 showToast("Erro ao conectar com a API!");
             }
-        }
-
-        async function salvarCurso() {
-            const id = document.getElementById("curso-id").value;
-            const titulo = document.getElementById("titulo").value;
-            const aulas = parseInt(document.getElementById("aulas").value);
-            const horas = parseInt(document.getElementById("horas").value);
-
-            if(!titulo || isNaN(aulas) || isNaN(horas)) {
-                showToast("Preencha todos os campos corretamente!");
-                return;
-            }
-
-            if (id) {
-                await fetch(`${API_URL}/${id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ titulo, aulas, horas })
-                });
-                showToast("Curso atualizado com sucesso!");
-            } else {
-                await fetch(API_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ titulo, aulas, horas })
-                });
-                showToast("Curso cadastrado no banco!");
-            }
-
-            limparFormulario();
-            carregarCursos();
         }
 
         // Funções do Modal de Deleção
@@ -295,14 +286,15 @@
             }
         };
 
-        function prepararEdicao(id, titulo, aulas, horas) {
-            document.getElementById("form-title").innerText = `Editar Curso #${id}`;
+        function prepararEdicao(id, titulo, categoria, aulas, horas) {
             document.getElementById("curso-id").value = id;
             document.getElementById("titulo").value = titulo;
+            document.getElementById("categoria").value = categoria || "Outros";
             document.getElementById("aulas").value = aulas;
             document.getElementById("horas").value = horas;
-            
-            document.getElementById("btn-submit").innerText = "Atualizar Dados";
+
+            document.getElementById("form-title").innerText = `Editar Curso #${id}`;
+            document.getElementById("btn-submit").innerText = "Atualizar Curso";
             document.getElementById("btn-cancel").style.display = "inline-block";
         }
 
