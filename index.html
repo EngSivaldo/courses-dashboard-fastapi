@@ -190,7 +190,7 @@
         const API_URL = "http://127.0.0.1:8000/cursos";
         let idParaDeletar = null;
 
-        // Mapeamento de Ícones Devicon baseados no Título
+        // Mapeamento de Ícones Devicon baseados na Categoria ou Título
         function obterIconeLinguagem(titulo) {
             const t = titulo.toLowerCase();
             if (t.includes("python")) return '<i class="devicon-python-plain colored"></i>';
@@ -201,7 +201,7 @@
             if (t.includes("react")) return '<i class="devicon-react-original colored"></i>';
             if (t.includes("html") || t.includes("css")) return '<i class="devicon-html5-plain colored"></i>';
             if (t.includes("sql")) return '<i class="devicon-sqldeveloper-plain colored"></i>';
-            return '<i class="devicon-code-style-plain" style="color: var(--primary);"></i>'; // Ícone Padrão
+            return '<i class="devicon-code-style-plain" style="color: var(--primary);"></i>';
         }
 
         function showToast(msg) {
@@ -224,6 +224,7 @@
                 tabela.innerHTML = "";
                 
                 let totalAulas = 0;
+                let totalHoras = 0;
 
                 cursos.forEach(c => {
                     totalAulas += c.aulas;
@@ -235,7 +236,7 @@
                 document.getElementById("kpi-horas").innerText = `${totalHoras}h`;
 
                 if(cursos.length === 0) {
-                    tabela.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 32px;">Nenhum curso cadastrado no banco.</td></tr>`;
+                    tabela.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 32px;">Nenhum curso encontrado.</td></tr>`;
                     return;
                 }
 
@@ -265,7 +266,44 @@
             }
         }
 
-        // Funções do Modal de Deleção
+        async function salvarCurso() {
+            const id = document.getElementById("curso-id").value;
+            const titulo = document.getElementById("titulo").value;
+            const categoria = document.getElementById("categoria").value;
+            const aulas = parseInt(document.getElementById("aulas").value);
+            const horas = parseInt(document.getElementById("horas").value);
+
+            if (!titulo || isNaN(aulas) || isNaN(horas) || aulas <= 0 || horas <= 0) {
+                showToast("Preencha todos os campos com valores válidos!");
+                return;
+            }
+
+            const payload = { titulo, categoria, aulas, horas };
+
+            try {
+                if (id) {
+                    await fetch(`${API_URL}/${id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    showToast("Curso atualizado com sucesso!");
+                } else {
+                    await fetch(API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    showToast("Curso cadastrado no banco!");
+                }
+
+                limparFormulario();
+                carregarCursos();
+            } catch (err) {
+                showToast("Erro ao salvar curso!");
+            }
+        }
+
         function abrirModalDeletar(id, titulo) {
             idParaDeletar = id;
             document.getElementById("modal-msg").innerText = `Tem certeza que deseja remover o curso "#${id} - ${titulo}"?`;
@@ -302,6 +340,7 @@
             document.getElementById("form-title").innerText = "Cadastrar Novo Curso";
             document.getElementById("curso-id").value = "";
             document.getElementById("titulo").value = "";
+            document.getElementById("categoria").value = "Python";
             document.getElementById("aulas").value = "";
             document.getElementById("horas").value = "";
             
